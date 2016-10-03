@@ -1,5 +1,7 @@
 __author__ = 'madhu'
 from api.api_settings import FILM_URL_API
+from api.api_settings import GOOGLE_MAP_NAME_LAT_LON_API
+from api.api_settings import GOOGLE_MAP_NAME_LAT_LON_API_KEY
 import urllib2
 import json as simplejson
 from django.http import HttpResponse
@@ -7,6 +9,7 @@ from django.core.cache import caches
 from mongo_wrapper import MongoWrapper
 from datetime import datetime
 import time
+from django.views.generic import ListView
 
 mongo_obj = MongoWrapper()
 film_mongo_connect = mongo_obj.get_connection()
@@ -20,9 +23,25 @@ def current_time_to_string(systemtime):
     return current_time_text
 
 
-class FilmSearchAPI:
+class FilmSearchAPI(ListView):
     def __init__(self):
-        pass
+        self.actor_list = []
+        self.director_list = []
+        self.production_house_list = []
+        self.film_name_list = []
+        self.writer_list = []
+
+    def get_queryset(self):
+        return self.film_data_limited()
+
+    def get(self, params_wsgi):
+        """
+        Get URLS Dispatcher
+        :param params_wsgi:
+        :return:
+        """
+        if params_wsgi.path == '/filmSearchAPI/get_values_for_auto_suggest':
+            return self.get_values_for_auto_suggest()
 
     def get_whole_film_data(self):
         req = urllib2.Request(FILM_URL_API)
@@ -54,11 +73,6 @@ class FilmSearchAPI:
         return HttpResponse(film_data)
 
     def get_values_for_auto_suggest(self):
-        actor_list = []
-        director_list = []
-        production_house_list = []
-        film_name_list = []
-        writer_list = []
         current_time = current_time_to_string(time.time()
                                               )
         film_json = rediscon.get(current_time)
@@ -72,17 +86,31 @@ class FilmSearchAPI:
             director = film.get('director', '')
             writer = film.get('writer', '')
             film_name = film.get('title', '')
-            if actor_1_name not in actor_list:
-                actor_list.append(actor_1_name)
-            if actor_2_name not in actor_list:
-                actor_list.append(actor_2_name)
-            if actor_3_name not in actor_list:
-                actor_list.append(actor_3_name)
-            if production_company not in production_house_list:
-                production_house_list.append(production_company)
-            if director not in director_list:
-                director_list.append(director)
-            if writer not in writer_list:
-                writer_list.append(writer)
-            if film_name not in film_name_list:
-                film_name_list.append(film_name)
+            if actor_1_name not in self.actor_list:
+                self.actor_list.append(actor_1_name)
+            if actor_2_name not in self.actor_list:
+                self.actor_list.append(actor_2_name)
+            if actor_3_name not in self.actor_list:
+                self.actor_list.append(actor_3_name)
+            if production_company not in self.production_house_list:
+                self.production_house_list.append(production_company)
+            if director not in self.director_list:
+                self.director_list.append(director)
+            if writer not in self.writer_list:
+                self.writer_list.append(writer)
+            if film_name not in self.film_name_list:
+                self.film_name_list.append(film_name)
+        result_dict = {'actor': self.actor_list, 'production_company': self.production_house_list,
+                       'director': self.director_list,
+                       'writer': self.writer_list, 'title': self.film_name_list
+                       }
+        return HttpResponse(simplejson.dumps(result_dict))
+
+    def get_location_json(self, locations=[]):
+        import pdb;
+        pdb.set_trace()
+        for location in locations:
+            location = location.replace(' ', '%20')
+            req = urllib2.Request(GOOGLE_MAP_NAME_LAT_LON_API + location + GOOGLE_MAP_NAME_LAT_LON_API_KEY)
+            response = urllib2.urlopen(req)
+        return (response.read())

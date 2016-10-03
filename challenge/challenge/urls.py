@@ -15,7 +15,9 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
+from challenge.views import FilmSearchAPI
 
 urlpatterns = [
-    url(r'^admin/', include(admin.site.urls)),
+    url(r'^filmSearchAPI/get_values_for_auto_suggest', FilmSearchAPI.as_view()),
+    url(r'^admin/', include(admin.site.urls))
 ]

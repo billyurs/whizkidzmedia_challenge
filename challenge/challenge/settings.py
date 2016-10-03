@@ -44,7 +44,7 @@ INSTALLED_APPS = (
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -105,18 +105,69 @@ STATIC_URL = '/static/'
 
 CACHE_DURATION = 900
 CACHES = {
-'default': {
+    'default': {
         'BACKEND': 'redis_cache.RedisCache',
         'LOCATION': 'localhost:6379',
     },
-'localcache': {
+    'localcache': {
         'BACKEND': 'redis_cache.RedisCache',
         'LOCATION': 'localhost:6379',
-        'TIMEOUT': 24*60*60,
+        'TIMEOUT': 24 * 60 * 60,
         'OPTIONS': {
-             'DB': 2
-         }
+            'DB': 2
+        }
     },
 }
 
-MONGO_DB_CONFIG = {'film_database_string':'localhost:27017'}
+MONGO_DB_CONFIG = {'film_database_string': 'localhost:27017'}
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt': "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/whiz_challenge.log'),
+            'formatter': 'verbose'
+        },
+        'statsfile': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/whiz_challenge_stats.log'),
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'propagate': True,
+            'level': 'DEBUG',
+        },
+        'whiz_challenge': {
+            'handlers': ['file'],
+            'level': 'INFO',
+        },
+        'whiz_challenge_stats': {
+            'handlers': ['statsfile'],
+            'level': 'INFO',
+        },
+        'whiz_challenge_debug': {
+            'handlers': ['statsfile'],
+            'level': 'DEBUG',
+        },
+        'whiz_challenge_error': {
+            'handlers': ['statsfile'],
+            'level': 'ERROR',
+        },
+
+    }
+}
