@@ -8,17 +8,23 @@ rediscon = caches['localcache']
 from datetime import datetime
 import copy
 from challenge.views import current_time_to_string
+import logging
+logger = logging.getLogger('whiz_challenge')
+logger_stats = logging.getLogger('whiz_challenge_stats')
+mongo_obj= MongoWrapper()
+film_mongo_connect = mongo_obj.get_connection()
 
 def daily_read_film_data():
     """
     This function runs on daily basis and grab and reads all the data from remote server
     :return:
     """
-    mongo_obj= MongoWrapper()
-    film_mongo_connect = mongo_obj.get_connection()
     current_time_text = current_time_to_string(time.time())
-    filmobj = FilmSearchAPI()
-    film_json = filmobj.get_whole_film_data()
+    filmsearch_obj = FilmSearchAPI()
+    film_json = filmsearch_obj.get_whole_film_data()
+    # Deletes the old redis data if it missed from without time
+    #out operation
+    delete_old_cache_item(film_json)
     # Writes the whole json data
     rediscon.set(current_time_text, film_json)
     # Writing it into redis cache
@@ -38,11 +44,27 @@ def daily_read_film_data():
                     place_name.append(location)
                 filmobj['locations'] = copy.copy(place_name)
             rediscon.set(title_name, copy.copy(filmobj))
+            logger_stats.info('%s\t%s\t%s\t%s\t'%(title_name, 'Updating into Redis', '',''))
             film_mongo_connect.update({"title": title_name},{ "$set":{'locations': filmobj.get('locations', [])}})
+            logger_stats.info('%s\t%s\t%s\t%s\t'%(title_name, 'Updating into mongo', '',''))
         else:
+            filmobj['location_dict'] = copy.copy(
+                filmsearch_obj.get_location_json(locations=[filmobj.get('locations', '')]))
             rediscon.set(title_name, copy.copy(filmobj))
+            logger_stats.info('%s\t%s\t%s\t%s\t'%(title_name, 'Adding into Redis', '',''))
             film_mongo_connect.insert_one(copy.copy(filmobj))
+            logger_stats.info('%s\t%s\t%s\t%s\t'%(title_name, 'Adding into mongo', '',''))
+
+def delete_old_cache_item(film_json):
+    for filmobj in film_json:
+        title_name = filmobj.get('title', '')
+        logger_stats.info('%s\t%s\t%s\t%s\t'%(title_name, 'Deleting from Redis', '',''))
+        rediscon.delete(title_name)
+        film_mongo_connect.delete_many({'title':title_name})
+        logger_stats.info('%s\t%s\t%s\t%s\t'%(title_name, 'Deleting from mongo', '',''))
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
         daily_read_film_data()
+
+
