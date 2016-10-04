@@ -9,7 +9,12 @@ from django.core.cache import caches
 from mongo_wrapper import MongoWrapper
 from datetime import datetime
 import time
+from django.shortcuts import render_to_response, get_object_or_404
 from django.views.generic import ListView
+import traceback
+import logging
+logger = logging.getLogger('whiz_challenge')
+logger_stats = logging.getLogger('whiz_challenge_stats')
 
 mongo_obj = MongoWrapper()
 film_mongo_connect = mongo_obj.get_connection()
@@ -107,10 +112,29 @@ class FilmSearchAPI(ListView):
         return HttpResponse(simplejson.dumps(result_dict))
 
     def get_location_json(self, locations=[]):
-        import pdb;
-        pdb.set_trace()
-        for location in locations:
-            location = location.replace(' ', '%20')
-            req = urllib2.Request(GOOGLE_MAP_NAME_LAT_LON_API + location + GOOGLE_MAP_NAME_LAT_LON_API_KEY)
-            response = urllib2.urlopen(req)
-        return (response.read())
+        try:
+            location_dict_list = []
+            lat_lon_dict = {}
+            for location in locations:
+                if location:
+                    location = location.replace(' ', '%20')
+                    req = urllib2.Request(GOOGLE_MAP_NAME_LAT_LON_API + location)
+                    response = simplejson.loads(urllib2.urlopen(req).read())
+                    if response.get('status') == 'OK':
+                        results_list = response.get('results', [])
+                        for result in results_list:
+                            if result.get('geometry', {}).get('location', {}):
+                                lat_lon_dict['location'] = location
+                                lat_lon_dict['lat'] = result.get('geometry', {}).get('location', {}).get('lat', '')
+                                lat_lon_dict['lon'] = result.get('geometry', {}).get('location', {}).get('lng', '')
+                                break
+                        location_dict_list.append(lat_lon_dict)
+            return location_dict_list
+        except:
+            exc_traceback = traceback.format_exc().splitlines()
+            logger_stats.critical('%s\t%s\t%s\t%s\t'%(locations,exc_traceback,'Exception',''))
+            return [{}]
+
+
+def index(request):
+    return render_to_response('index.html')

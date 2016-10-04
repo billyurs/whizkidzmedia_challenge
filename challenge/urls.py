@@ -1,6 +1,7 @@
 from django.conf.urls.defaults import patterns, include, url
 from django.conf import settings
 from challenge.views import FilmSearchAPI
+from challenge.views import index
 
 # Uncomment the next two lines to enable the admin:
 # from django.contrib import admin
@@ -9,7 +10,7 @@ from challenge.views import FilmSearchAPI
 urlpatterns = patterns('',
     # Examples:
     url(r'^filmSearchAPI/get_values_for_auto_suggest', FilmSearchAPI.as_view()),
-     #url(r'^api/', 'challenge.views.home', name='home'),
+                       url(r'^', index, name='index'),
     # url(r'^challenge/', include('challenge.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
